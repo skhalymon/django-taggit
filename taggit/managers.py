@@ -106,9 +106,12 @@ class _TaggableManager(models.Manager):
                      else 'content_object')
         fk = self.through._meta.get_field(fieldname)
         query = {
-            '%s__%s__in' % (self.through.tag_relname(), fk.name):
-                set(obj._get_pk_val() for obj in instances)
+            '%s__%s__in'
+            % (self.through.tag_relname(), fk.name): {
+                obj._get_pk_val() for obj in instances
+            }
         }
+
         join_table = self.through._meta.db_table
         source_col = fk.column
         connection = connections[db]
@@ -151,7 +154,7 @@ class _TaggableManager(models.Manager):
         )
         tag_objs.update(existing)
 
-        for new_tag in str_tags - set(t.name for t in existing):
+        for new_tag in str_tags - {t.name for t in existing}:
             tag_objs.add(self.through.tag_model().objects.create(name=new_tag))
 
         for tag in tag_objs:
@@ -245,13 +248,12 @@ class TaggableManager(RelatedField, Field):
         if instance is not None and instance.pk is None:
             raise ValueError("%s objects need to have a primary key value "
                              "before you can access their tags." % model.__name__)
-        manager = self.manager(
+        return self.manager(
             through=self.through,
             model=model,
             instance=instance,
             prefetch_cache_name=self.name
         )
-        return manager
 
     def deconstruct(self):
         """

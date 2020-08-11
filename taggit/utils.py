@@ -68,10 +68,7 @@ def parse_tags(tagstring):
                 saw_loose_comma = True
             to_be_split.append(''.join(buffer))
     if to_be_split:
-        if saw_loose_comma:
-            delimiter = ','
-        else:
-            delimiter = ' '
+        delimiter = ',' if saw_loose_comma else ' '
         for chunk in to_be_split:
             words.extend(split_strip(chunk, delimiter))
     words = list(set(words))

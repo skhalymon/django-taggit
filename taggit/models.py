@@ -44,37 +44,36 @@ class TagBase(models.Model):
         abstract = True
 
     def save(self, *args, **kwargs):
-        if not self.pk and not self.slug:
-            self.slug = self.slugify(self.name)
-            from django.db import router
-            using = kwargs.get("using") or router.db_for_write(
-                type(self), instance=self)
-            # Make sure we write to the same db for all attempted writes,
-            # with a multi-master setup, theoretically we could try to
-            # write and rollback on different DBs
-            kwargs["using"] = using
-            # Be oportunistic and try to save the tag, this should work for
-            # most cases ;)
-            try:
-                with atomic(using=using):
-                    res = super(TagBase, self).save(*args, **kwargs)
-                return res
-            except IntegrityError:
-                pass
-            # Now try to find existing slugs with similar names
-            slugs = set(Tag.objects.filter(slug__startswith=self.slug)
-                                   .values_list('slug', flat=True))
-            i = 1
-            while True:
-                slug = self.slugify(self.name, i)
-                if slug not in slugs:
-                    self.slug = slug
-                    # We purposely ignore concurrecny issues here for now.
-                    # (That is, till we found a nice solution...)
-                    return super(TagBase, self).save(*args, **kwargs)
-                i += 1
-        else:
+        if self.pk or self.slug:
             return super(TagBase, self).save(*args, **kwargs)
+        self.slug = self.slugify(self.name)
+        from django.db import router
+        using = kwargs.get("using") or router.db_for_write(
+            type(self), instance=self)
+        # Make sure we write to the same db for all attempted writes,
+        # with a multi-master setup, theoretically we could try to
+        # write and rollback on different DBs
+        kwargs["using"] = using
+        # Be oportunistic and try to save the tag, this should work for
+        # most cases ;)
+        try:
+            with atomic(using=using):
+                res = super(TagBase, self).save(*args, **kwargs)
+            return res
+        except IntegrityError:
+            pass
+        # Now try to find existing slugs with similar names
+        slugs = set(Tag.objects.filter(slug__startswith=self.slug)
+                               .values_list('slug', flat=True))
+        i = 1
+        while True:
+            slug = self.slugify(self.name, i)
+            if slug not in slugs:
+                self.slug = slug
+                # We purposely ignore concurrecny issues here for now.
+                # (That is, till we found a nice solution...)
+                return super(TagBase, self).save(*args, **kwargs)
+            i += 1
 
     def slugify(self, tag, i=None):
         slug = default_slugify(tag)

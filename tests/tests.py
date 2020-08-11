@@ -362,7 +362,7 @@ class TaggableManagerTestCase(BaseTaggingTestCase):
         with self.assertNumQueries(2):
             l = list(self.food_model.objects.prefetch_related('tags').all())
         with self.assertNumQueries(0):
-            foods = dict((f.name, set(t.name for t in f.tags.all())) for f in l)
+            foods = {f.name: {t.name for t in f.tags.all()} for f in l}
             self.assertEqual(foods, {
                 'orange': set(['2', '4']),
                 'apple': set(['1', '2'])
@@ -595,5 +595,6 @@ class InheritedPrefetchTests(TestCase):
         child = Child.objects.prefetch_related('tags').get()
         prefetch_tags = child.tags.all()
         self.assertEquals(4, prefetch_tags.count())
-        self.assertEquals(set([t.name for t in no_prefetch_tags]),
-                          set([t.name for t in prefetch_tags]))
+        self.assertEquals(
+            {t.name for t in no_prefetch_tags}, {t.name for t in prefetch_tags}
+        )
